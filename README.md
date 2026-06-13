@@ -2,11 +2,14 @@
 
 A small full-stack playground that lets anyone try the **gpt-image-2** image
 generation model. Write a prompt, pick an aspect ratio, optionally add reference
-images, and watch the result render live.
+images, and watch the result render live. The UI is in Simplified Chinese.
 
-The frontend was designed with the **design-taste-frontend** skill: a dark
-cinematic studio look, a single accent color, self-hosted fonts, real states
-(empty / loading / result / error), and live progress.
+The frontend was designed with the **design-taste-frontend** skill: a light
+editorial studio look, a single accent color, self-hosted fonts, real states
+(empty / loading / result / error), and live progress. Every parameter from the
+upstream API request body is exposed; the optional ones (`model`, custom
+`aspectRatio`, `webHook`, `shutProgress`) live in a collapsible 高级参数
+(advanced) section.
 
 ![studio](static/showcase/coast.webp)
 
@@ -33,6 +36,7 @@ through to the client so the progress bar updates in real time.
     "prompt": "a neon-lit ramen stall in the rain, cinematic",
     "aspectRatio": "1024x1024",
     "urls": ["https://example.com/ref.png"],
+    "webHook": "https://example.com/callback",
     "shutProgress": false
   }
   ```
@@ -71,7 +75,7 @@ Open http://localhost:8000.
 ```
 app/main.py        FastAPI app: /api/generate (SSE proxy), /api/config, /healthz, static serving
 static/index.html  single-page studio UI
-static/styles.css  dark studio theme (self-hosted Space Grotesk + JetBrains Mono)
+static/styles.css  light studio theme (self-hosted Space Grotesk + JetBrains Mono)
 static/app.js      prompt form, SSE parsing, live progress, gallery
 static/showcase/   example renders produced by gpt-image-2 itself
 ```

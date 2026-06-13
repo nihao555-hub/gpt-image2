@@ -12,6 +12,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+import re
 from collections.abc import AsyncIterator
 from pathlib import Path
 
@@ -32,9 +33,11 @@ GRSAI_API_KEY = os.environ.get("GRSAI_API_KEY", "").strip()
 GRSAI_BASE_URL = os.environ.get("GRSAI_BASE_URL", "https://grsaiapi.com").rstrip("/")
 GRSAI_MODEL = os.environ.get("GRSAI_MODEL", "gpt-image-2")
 
-# A curated set of aspect ratios surfaced in the UI. The upstream API is lenient,
-# but we constrain the public surface to values we have verified.
-ALLOWED_ASPECT_RATIOS = {"1024x1024", "1536x1024", "1024x1536", "auto"}
+# Aspect-ratio presets surfaced in the UI. The upstream API is lenient and also
+# accepts "auto" plus arbitrary WxH strings, so we additionally allow any value
+# matching ``ASPECT_RATIO_RE`` (used by the "custom size" advanced field).
+ASPECT_RATIO_PRESETS = ["1024x1024", "1536x1024", "1024x1536", "auto"]
+ASPECT_RATIO_RE = re.compile(r"^\d{2,5}x\d{2,5}$")
 MAX_REFERENCE_URLS = 4
 
 app = FastAPI(title="gpt-image-2 Studio", version="0.1.0")
@@ -44,6 +47,10 @@ class GenerateRequest(BaseModel):
     prompt: str = Field(..., min_length=1, max_length=4000)
     aspectRatio: str = Field(default="1024x1024")
     urls: list[str] = Field(default_factory=list)
+    # Advanced, all optional. Mirror the upstream API request body 1:1.
+    model: str = Field(default="")
+    webHook: str = Field(default="")
+    shutProgress: bool = Field(default=False)
 
     @field_validator("prompt")
     @classmethod
@@ -56,7 +63,10 @@ class GenerateRequest(BaseModel):
     @field_validator("aspectRatio")
     @classmethod
     def _check_ratio(cls, value: str) -> str:
-        return value if value in ALLOWED_ASPECT_RATIOS else "1024x1024"
+        value = (value or "").strip()
+        if value == "auto" or ASPECT_RATIO_RE.match(value):
+            return value
+        return "1024x1024"
 
     @field_validator("urls")
     @classmethod
@@ -68,6 +78,19 @@ class GenerateRequest(BaseModel):
             if not (url.startswith("http://") or url.startswith("https://")):
                 raise ValueError(f"reference image url must be http(s): {url}")
         return cleaned
+
+    @field_validator("model")
+    @classmethod
+    def _clean_model(cls, value: str) -> str:
+        return (value or "").strip()
+
+    @field_validator("webHook")
+    @classmethod
+    def _check_webhook(cls, value: str) -> str:
+        value = (value or "").strip()
+        if value and not (value.startswith("http://") or value.startswith("https://")):
+            raise ValueError("webHook must be an http(s) URL")
+        return value
 
 
 def _sse(payload: dict) -> bytes:
@@ -86,13 +109,15 @@ async def _stream_generation(req: GenerateRequest) -> AsyncIterator[bytes]:
         return
 
     payload: dict = {
-        "model": GRSAI_MODEL,
+        "model": req.model or GRSAI_MODEL,
         "prompt": req.prompt,
         "aspectRatio": req.aspectRatio,
-        "shutProgress": False,
+        "shutProgress": req.shutProgress,
     }
     if req.urls:
         payload["urls"] = req.urls
+    if req.webHook:
+        payload["webHook"] = req.webHook
 
     headers = {
         "Content-Type": "application/json",
@@ -147,7 +172,7 @@ async def config() -> JSONResponse:
     return JSONResponse(
         {
             "model": GRSAI_MODEL,
-            "aspectRatios": ["1024x1024", "1536x1024", "1024x1536", "auto"],
+            "aspectRatios": ASPECT_RATIO_PRESETS,
             "maxReferenceUrls": MAX_REFERENCE_URLS,
             "apiKeyConfigured": bool(GRSAI_API_KEY),
         }

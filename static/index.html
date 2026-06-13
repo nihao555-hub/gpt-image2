@@ -1,59 +1,58 @@
 <!doctype html>
-<html lang="en">
+<html lang="zh-CN">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>gpt-image-2 Studio</title>
+    <title>gpt-image-2 工作室 · 在线生图体验</title>
     <meta
       name="description"
-      content="A playground for the gpt-image-2 model. Write a prompt, choose a ratio, add reference images, and watch it render live."
+      content="gpt-image-2 在线生图体验台。输入提示词、选择尺寸、按需添加参考图，实时看到模型渲染出的图像。"
     />
-    <link rel="preconnect" href="/" />
     <link rel="stylesheet" href="/styles.css" />
-    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0c'/%3E%3Cpath d='M9 21 L16 8 L23 21 Z' fill='none' stroke='%23ff5a36' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23f4f3ee'/%3E%3Cpath d='M9 21 L16 8 L23 21 Z' fill='none' stroke='%23d23c14' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E" />
   </head>
   <body>
     <header class="nav" data-reveal>
-      <a class="brand" href="/" aria-label="gpt-image-2 Studio home">
+      <a class="brand" href="/" aria-label="gpt-image-2 工作室首页">
         <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
-          <rect width="32" height="32" rx="8" fill="none" stroke="currentColor" stroke-opacity="0.18" />
-          <path d="M9 21 L16 8 L23 21 Z" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round" />
-          <circle cx="16" cy="21" r="1.6" fill="var(--accent)" />
+          <rect width="32" height="32" rx="8" fill="none" stroke="currentColor" stroke-opacity="0.16" />
+          <path d="M9 21 L16 8 L23 21 Z" fill="none" stroke="var(--accent-strong)" stroke-width="2.4" stroke-linejoin="round" />
+          <circle cx="16" cy="21" r="1.6" fill="var(--accent-strong)" />
         </svg>
-        <span class="brand__name">gpt-image-2 <span class="brand__tag">studio</span></span>
+        <span class="brand__name">gpt-image-2 <span class="brand__tag">工作室</span></span>
       </a>
       <nav class="nav__links">
-        <span class="status-pill" id="statusPill" title="Backend status">
+        <span class="status-pill" id="statusPill" title="服务状态">
           <span class="status-pill__dot"></span>
-          <span id="statusText">checking</span>
+          <span id="statusText">检测中</span>
         </span>
-        <a class="nav__link" href="#studio">Open studio</a>
+        <a class="nav__link" href="#studio">进入工作台</a>
       </nav>
     </header>
 
     <main>
       <section class="hero">
         <div class="hero__copy" data-reveal>
-          <p class="eyebrow">Image generation playground</p>
-          <h1 class="hero__title">Describe it.<br /><em>Render it.</em></h1>
+          <p class="eyebrow">图像生成 · 在线体验</p>
+          <h1 class="hero__title">描述它。<br /><em>生成它。</em></h1>
           <p class="hero__sub">
-            A hands-on playground for gpt-image-2. Write a prompt, choose a ratio,
-            optionally add reference images, and watch the result render live.
+            输入提示词，选择尺寸，按需添加参考图，实时看到 gpt-image-2
+            渲染出的画面。
           </p>
           <div class="hero__actions">
-            <a class="btn btn--primary" href="#studio">Start creating</a>
-            <a class="btn btn--ghost" href="#gallery">See examples</a>
+            <a class="btn btn--primary" href="#studio">开始生成</a>
+            <a class="btn btn--ghost" href="#gallery">看看示例</a>
           </div>
         </div>
         <figure class="hero__art" data-reveal data-reveal-delay="1">
           <img
             id="heroArt"
             src="/showcase/coast.webp"
-            alt="A render from gpt-image-2: a coastal road along emerald sea cliffs at golden hour"
+            alt="gpt-image-2 的生成结果：金色时分蜿蜒于翠绿海崖之间的海岸公路"
             loading="eager"
           />
           <figcaption class="hero__art-caption">
-            <span class="mono">output</span> coastal cliffs at golden hour
+            <span class="mono">输出</span> 金色海岸公路
           </figcaption>
         </figure>
       </section>
@@ -61,45 +60,45 @@
       <section class="studio" id="studio">
         <form class="panel" id="genForm" autocomplete="off">
           <div class="panel__head">
-            <h2 class="panel__title">Generate</h2>
-            <span class="mono panel__model">model: gpt-image-2</span>
+            <h2 class="panel__title">生成图像</h2>
+            <span class="mono panel__model" id="panelModel">模型 · gpt-image-2</span>
           </div>
 
           <div class="field">
-            <label class="field__label" for="prompt">Prompt</label>
+            <label class="field__label" for="prompt">提示词</label>
             <textarea
               id="prompt"
               name="prompt"
               class="field__textarea"
               rows="4"
               maxlength="4000"
-              placeholder="A neon-lit ramen stall in the rain, cinematic, 35mm"
+              placeholder="雨夜霓虹下的拉面摊，电影质感，35mm 胶片"
               required
             ></textarea>
             <div class="field__meta">
-              <span class="field__hint">Be specific about subject, lighting and style.</span>
+              <span class="field__hint">尽量写清主体、光线与风格。</span>
               <span class="field__count"><span id="promptCount">0</span>/4000</span>
             </div>
           </div>
 
           <div class="field">
-            <span class="field__label">Aspect ratio</span>
-            <div class="segmented" role="radiogroup" aria-label="Aspect ratio" id="ratioGroup">
+            <span class="field__label">图像尺寸</span>
+            <div class="segmented" role="radiogroup" aria-label="图像尺寸" id="ratioGroup">
               <label class="segmented__opt">
                 <input type="radio" name="ratio" value="1024x1024" checked />
-                <span>1:1<small>square</small></span>
+                <span>1:1<small>正方形</small></span>
               </label>
               <label class="segmented__opt">
                 <input type="radio" name="ratio" value="1536x1024" />
-                <span>3:2<small>landscape</small></span>
+                <span>3:2<small>横向</small></span>
               </label>
               <label class="segmented__opt">
                 <input type="radio" name="ratio" value="1024x1536" />
-                <span>2:3<small>portrait</small></span>
+                <span>2:3<small>竖向</small></span>
               </label>
               <label class="segmented__opt">
                 <input type="radio" name="ratio" value="auto" />
-                <span>Auto<small>model picks</small></span>
+                <span>自动<small>模型决定</small></span>
               </label>
             </div>
           </div>
@@ -107,98 +106,128 @@
           <div class="field">
             <button type="button" class="disclosure" id="refToggle" aria-expanded="false" aria-controls="refPanel">
               <span class="disclosure__chevron" aria-hidden="true">+</span>
-              Reference images <span class="field__hint">optional, for image-to-image</span>
+              参考图 <span class="field__hint">可选，用于图生图</span>
             </button>
             <div class="ref" id="refPanel" hidden>
               <div class="ref__rows" id="refRows"></div>
-              <button type="button" class="ref__add" id="refAdd">Add image URL</button>
-              <p class="field__hint">Paste up to 4 public image URLs. gpt-image-2 edits and remixes them with your prompt.</p>
+              <button type="button" class="ref__add" id="refAdd">添加图片链接</button>
+              <p class="field__hint">最多 4 个公网图片链接，gpt-image-2 会结合提示词进行改绘。</p>
+            </div>
+          </div>
+
+          <div class="field">
+            <button type="button" class="disclosure" id="advToggle" aria-expanded="false" aria-controls="advPanel">
+              <span class="disclosure__chevron" aria-hidden="true">+</span>
+              高级参数 <span class="field__hint">可选，对齐 API 文档</span>
+            </button>
+            <div class="adv" id="advPanel" hidden>
+              <div class="adv__field">
+                <label class="field__label" for="modelInput">模型 <span class="mono adv__key">model</span></label>
+                <input id="modelInput" class="adv__input" type="text" value="gpt-image-2" placeholder="gpt-image-2" />
+              </div>
+              <div class="adv__field">
+                <label class="field__label" for="customSize">自定义尺寸 <span class="mono adv__key">aspectRatio</span></label>
+                <input id="customSize" class="adv__input mono" type="text" inputmode="text" placeholder="例如 1280x720，留空则用上方尺寸" />
+                <p class="field__hint">填写后会覆盖上方的尺寸选择。</p>
+              </div>
+              <div class="adv__field">
+                <label class="field__label" for="webhookInput">回调地址 <span class="mono adv__key">webHook</span></label>
+                <input id="webhookInput" class="adv__input mono" type="url" placeholder="https://example.com/callback" />
+                <p class="field__hint">可选，生成完成后服务端会回调该地址。</p>
+              </div>
+              <label class="toggle" for="shutProgress">
+                <input type="checkbox" id="shutProgress" />
+                <span class="toggle__track" aria-hidden="true"><span class="toggle__thumb"></span></span>
+                <span class="toggle__text">
+                  关闭进度推送 <span class="mono adv__key">shutProgress</span>
+                  <small class="field__hint">开启后只返回最终结果，不推送中间进度。</small>
+                </span>
+              </label>
             </div>
           </div>
 
           <button type="submit" class="btn btn--primary btn--block" id="generateBtn">
-            <span class="btn__label">Generate image</span>
+            <span class="btn__label">生成图像</span>
           </button>
           <p class="panel__note" id="panelNote" hidden></p>
         </form>
 
         <div class="canvas" id="canvas" data-state="empty" style="--canvas-ratio: 1 / 1">
-          <!-- EMPTY -->
+          <!-- 空状态 -->
           <div class="canvas__empty state">
             <svg viewBox="0 0 48 48" class="canvas__icon" aria-hidden="true">
               <rect x="6" y="9" width="36" height="30" rx="4" fill="none" stroke="currentColor" stroke-width="1.6" />
               <circle cx="17" cy="20" r="3.4" fill="none" stroke="currentColor" stroke-width="1.6" />
               <path d="M9 35 L20 25 L28 31 L34 26 L39 31" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" />
             </svg>
-            <p class="canvas__title">Your render appears here</p>
-            <p class="canvas__hint">Write a prompt and press generate.</p>
+            <p class="canvas__title">生成结果将显示在这里</p>
+            <p class="canvas__hint">输入提示词后点击「生成图像」。</p>
           </div>
 
-          <!-- LOADING -->
+          <!-- 加载中 -->
           <div class="canvas__loading state">
             <div class="skeleton" aria-hidden="true"></div>
-            <div class="progress">
+            <div class="progress" id="progress">
               <div class="progress__bar"><span id="progressFill"></span></div>
               <div class="progress__meta">
-                <span class="mono" id="progressStatus">starting</span>
+                <span class="mono" id="progressStatus">准备中</span>
                 <span class="mono" id="progressPct">0%</span>
               </div>
             </div>
           </div>
 
-          <!-- RESULT -->
+          <!-- 结果 -->
           <figure class="canvas__result state">
-            <img id="resultImg" alt="Generated image" />
+            <img id="resultImg" alt="生成的图像" />
             <figcaption class="result__bar">
               <p class="result__prompt" id="resultPrompt"></p>
               <div class="result__actions">
-                <a class="btn btn--sm btn--ghost" id="downloadBtn" download="gpt-image-2.png">Download</a>
-                <a class="btn btn--sm btn--ghost" id="openBtn" target="_blank" rel="noopener">Open</a>
-                <button type="button" class="btn btn--sm btn--ghost" id="useRefBtn">Use as reference</button>
+                <a class="btn btn--sm btn--ghost" id="downloadBtn" download="gpt-image-2.png">下载</a>
+                <a class="btn btn--sm btn--ghost" id="openBtn" target="_blank" rel="noopener">打开原图</a>
+                <button type="button" class="btn btn--sm btn--ghost" id="useRefBtn">作为参考图</button>
               </div>
             </figcaption>
           </figure>
 
-          <!-- ERROR -->
+          <!-- 错误 -->
           <div class="canvas__error state">
             <svg viewBox="0 0 48 48" class="canvas__icon" aria-hidden="true">
               <circle cx="24" cy="24" r="17" fill="none" stroke="currentColor" stroke-width="1.6" />
               <path d="M24 15 V27" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
               <circle cx="24" cy="32.5" r="1.4" fill="currentColor" />
             </svg>
-            <p class="canvas__title">Generation failed</p>
-            <p class="canvas__hint" id="errorText">Something went wrong.</p>
-            <button type="button" class="btn btn--sm btn--primary" id="retryBtn">Try again</button>
+            <p class="canvas__title">生成失败</p>
+            <p class="canvas__hint" id="errorText">出了点问题，请重试。</p>
+            <button type="button" class="btn btn--sm btn--primary" id="retryBtn">重试</button>
           </div>
         </div>
       </section>
 
       <section class="gallery" id="gallery">
         <div class="gallery__head" data-reveal>
-          <p class="eyebrow">Made with gpt-image-2</p>
-          <h2 class="gallery__title">A few renders to start from</h2>
-          <p class="gallery__sub">Tap any example to load its prompt into the studio.</p>
+          <h2 class="gallery__title">一些可以直接上手的示例</h2>
+          <p class="gallery__sub">点击任意示例，把它的提示词载入工作台。</p>
         </div>
         <div class="gallery__grid" id="galleryGrid">
-          <button class="sample" type="button" data-prompt="Aerial cinematic view of a winding coastal road along emerald sea cliffs at golden hour, long shadows, ultra detailed landscape photography" data-ratio="1536x1024">
-            <img src="/showcase/coast.webp" alt="Coastal road along sea cliffs at golden hour" loading="lazy" />
-            <span class="sample__caption">Coastal cliffs, golden hour</span>
+          <button class="sample" type="button" data-prompt="金色时分的航拍镜头，蜿蜒的海岸公路依偎着翠绿的海崖，长长的光影，超精细风光摄影" data-ratio="1536x1024">
+            <img src="/showcase/coast.webp" alt="金色时分的海岸公路" loading="lazy" />
+            <span class="sample__caption">金色海岸公路</span>
           </button>
-          <button class="sample" type="button" data-prompt="Studio portrait of a snow leopard in misty alpine forest, dramatic rim light, shallow depth of field, photorealistic, fine fur detail" data-ratio="1024x1536">
-            <img src="/showcase/leopard.webp" alt="Portrait of a snow leopard in misty forest" loading="lazy" />
-            <span class="sample__caption">Snow leopard, rim light</span>
+          <button class="sample" type="button" data-prompt="雾气弥漫的高山森林中，一只雪豹的影棚肖像，戏剧性的轮廓光，浅景深，照片级真实，细腻的毛发细节" data-ratio="1024x1536">
+            <img src="/showcase/leopard.webp" alt="雾林中的雪豹肖像" loading="lazy" />
+            <span class="sample__caption">雪豹 · 轮廓光</span>
           </button>
-          <button class="sample" type="button" data-prompt="A sculptural matte ceramic vase holding dried pampas grass, soft directional window light, minimalist studio still life, warm neutral palette, editorial product photography, high detail" data-ratio="1024x1024">
-            <img src="/showcase/still-life.webp" alt="Ceramic vase with pampas grass still life" loading="lazy" />
-            <span class="sample__caption">Ceramic still life</span>
+          <button class="sample" type="button" data-prompt="一只哑光陶瓷花瓶插着干芦苇，柔和的侧向窗光，极简影棚静物，温暖中性色调，杂志级产品摄影，高细节" data-ratio="1024x1024">
+            <img src="/showcase/still-life.webp" alt="干芦苇陶瓷花瓶静物" loading="lazy" />
+            <span class="sample__caption">陶瓷静物</span>
           </button>
         </div>
       </section>
     </main>
 
     <footer class="footer">
-      <span class="mono">gpt-image-2 studio</span>
-      <span class="footer__dim">Renders served live through the grsai image API.</span>
+      <span class="mono">gpt-image-2 工作室</span>
+      <span class="footer__dim">图像通过 grsai 接口实时生成。</span>
     </footer>
 
     <script src="/app.js"></script>

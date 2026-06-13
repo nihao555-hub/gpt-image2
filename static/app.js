@@ -1,4 +1,4 @@
-/* gpt-image-2 Studio — frontend logic */
+/* gpt-image-2 工作室 — 前端逻辑 */
 (() => {
   "use strict";
 
@@ -13,13 +13,22 @@
   };
   const MAX_REFS = 4;
 
+  const ratioToCss = (val) => {
+    if (RATIO_TO_CSS[val]) return RATIO_TO_CSS[val];
+    const m = /^(\d{2,5})x(\d{2,5})$/.exec((val || "").trim());
+    if (m) return `${m[1]} / ${m[2]}`;
+    return "1 / 1";
+  };
+
   const form = $("#genForm");
   const promptEl = $("#prompt");
   const promptCount = $("#promptCount");
   const canvas = $("#canvas");
   const generateBtn = $("#generateBtn");
   const panelNote = $("#panelNote");
+  const panelModel = $("#panelModel");
 
+  const progress = $("#progress");
   const progressFill = $("#progressFill");
   const progressStatus = $("#progressStatus");
   const progressPct = $("#progressPct");
@@ -37,10 +46,17 @@
   const refRows = $("#refRows");
   const refAdd = $("#refAdd");
 
+  const advToggle = $("#advToggle");
+  const advPanel = $("#advPanel");
+  const modelInput = $("#modelInput");
+  const customSize = $("#customSize");
+  const webhookInput = $("#webhookInput");
+  const shutProgressEl = $("#shutProgress");
+
   let lastPayload = null;
   let inFlight = false;
 
-  /* ---------- reveal on scroll ---------- */
+  /* ---------- 滚动渐入 ---------- */
   const io = new IntersectionObserver(
     (entries) => {
       entries.forEach((e) => {
@@ -54,22 +70,49 @@
   );
   $$("[data-reveal]").forEach((el) => io.observe(el));
 
-  /* ---------- prompt counter ---------- */
+  /* ---------- 提示词字数 ---------- */
   const updateCount = () => {
     promptCount.textContent = String(promptEl.value.length);
   };
   promptEl.addEventListener("input", updateCount);
   updateCount();
 
-  /* ---------- aspect ratio -> canvas sizing ---------- */
-  const currentRatio = () => form.querySelector('input[name="ratio"]:checked').value;
+  /* ---------- 尺寸 -> 画布比例 ---------- */
+  const checkedRatio = () => form.querySelector('input[name="ratio"]:checked').value;
+  const activeRatio = () => (customSize && customSize.value.trim()) || checkedRatio();
   const syncCanvasRatio = () => {
-    canvas.style.setProperty("--canvas-ratio", RATIO_TO_CSS[currentRatio()] || "1 / 1");
+    canvas.style.setProperty("--canvas-ratio", ratioToCss(activeRatio()));
   };
   $$('input[name="ratio"]').forEach((r) => r.addEventListener("change", syncCanvasRatio));
   syncCanvasRatio();
 
-  /* ---------- reference image rows ---------- */
+  /* ---------- 高级参数 ---------- */
+  const toggleDisclosure = (toggle, panel, onOpen) => {
+    toggle.addEventListener("click", () => {
+      const willOpen = panel.hasAttribute("hidden");
+      if (willOpen) {
+        panel.removeAttribute("hidden");
+        toggle.setAttribute("aria-expanded", "true");
+        if (onOpen) onOpen();
+      } else {
+        panel.setAttribute("hidden", "");
+        toggle.setAttribute("aria-expanded", "false");
+      }
+    });
+  };
+  toggleDisclosure(advToggle, advPanel);
+
+  if (modelInput) {
+    modelInput.addEventListener("input", () => {
+      const name = modelInput.value.trim() || "gpt-image-2";
+      panelModel.textContent = "模型 · " + name;
+    });
+  }
+  if (customSize) {
+    customSize.addEventListener("input", syncCanvasRatio);
+  }
+
+  /* ---------- 参考图 ---------- */
   const refValues = () =>
     $$(".ref__row input", refRows)
       .map((i) => i.value.trim())
@@ -90,7 +133,7 @@
     const remove = document.createElement("button");
     remove.type = "button";
     remove.className = "ref__remove";
-    remove.setAttribute("aria-label", "Remove reference image");
+    remove.setAttribute("aria-label", "移除参考图");
     remove.textContent = "\u00d7";
     remove.addEventListener("click", () => {
       row.remove();
@@ -102,16 +145,8 @@
     return input;
   };
 
-  refToggle.addEventListener("click", () => {
-    const open = refPanel.hasAttribute("hidden");
-    if (open) {
-      refPanel.removeAttribute("hidden");
-      refToggle.setAttribute("aria-expanded", "true");
-      if ($$(".ref__row", refRows).length === 0) addRefRow();
-    } else {
-      refPanel.setAttribute("hidden", "");
-      refToggle.setAttribute("aria-expanded", "false");
-    }
+  toggleDisclosure(refToggle, refPanel, () => {
+    if ($$(".ref__row", refRows).length === 0) addRefRow();
   });
   refAdd.addEventListener("click", () => {
     const input = addRefRow();
@@ -127,9 +162,12 @@
     syncRefAdd();
   };
 
-  /* ---------- canvas state ---------- */
+  /* ---------- 画布状态 ---------- */
   const setState = (state) => {
     canvas.dataset.state = state;
+  };
+  const setIndeterminate = (on) => {
+    progress.classList.toggle("is-indeterminate", on);
   };
   const setProgress = (pct, statusWord) => {
     const clamped = Math.max(0, Math.min(100, Math.round(pct)));
@@ -139,7 +177,7 @@
   };
 
   const showError = (msg) => {
-    errorText.textContent = msg || "Something went wrong. Please try again.";
+    errorText.textContent = msg || "出了点问题，请重试。";
     setState("error");
     setBusy(false);
   };
@@ -149,33 +187,34 @@
     generateBtn.classList.toggle("is-busy", busy);
     generateBtn.disabled = busy;
     generateBtn.innerHTML = busy
-      ? '<span class="spinner"></span><span class="btn__label">Generating</span>'
-      : '<span class="btn__label">Generate image</span>';
+      ? '<span class="spinner"></span><span class="btn__label">生成中</span>'
+      : '<span class="btn__label">生成图像</span>';
   };
 
-  /* ---------- result image (with propagation retry) ---------- */
+  /* ---------- 结果图片（带传播重试） ---------- */
   const showResult = (url, promptText) => {
     let attempts = 0;
-    setProgress(100, "finalizing");
+    setIndeterminate(false);
+    setProgress(100, "收尾中");
     resultImg.onerror = () => {
       if (attempts++ < 6) {
         setTimeout(() => {
           resultImg.src = url + (url.includes("?") ? "&" : "?") + "r=" + Date.now();
         }, 1400);
       } else {
-        showError("The image finished rendering but could not be loaded. Open it directly below.");
+        showError("图像已生成，但暂时无法加载，可点击下方「打开原图」直接查看。");
         openBtn.href = url;
       }
     };
     resultImg.onload = () => setState("result");
     resultImg.src = url;
-    resultImg.alt = promptText ? "Generated image: " + promptText : "Generated image";
+    resultImg.alt = promptText ? "生成的图像：" + promptText : "生成的图像";
     resultPrompt.textContent = promptText;
     openBtn.href = url;
     downloadBtn.dataset.url = url;
   };
 
-  /* ---------- download ---------- */
+  /* ---------- 下载 ---------- */
   downloadBtn.addEventListener("click", async (e) => {
     e.preventDefault();
     const url = downloadBtn.dataset.url;
@@ -203,7 +242,7 @@
     if (lastPayload) runGeneration(lastPayload);
   });
 
-  /* ---------- SSE event handling ---------- */
+  /* ---------- SSE 事件处理 ---------- */
   const handleEvent = (raw) => {
     const dataLines = raw
       .split("\n")
@@ -219,16 +258,17 @@
     }
     const status = d.status || "running";
     if (status === "failed") {
-      showError(d.failure_reason || d.error || d.detail || "Generation failed.");
+      showError(d.failure_reason || d.error || d.detail || "生成失败，请重试。");
       return;
     }
     if (typeof d.progress === "number") {
-      setProgress(d.progress, status === "succeeded" ? "finalizing" : "rendering");
+      setIndeterminate(false);
+      setProgress(d.progress, status === "succeeded" ? "收尾中" : "生成中");
     }
     if (status === "succeeded") {
       const url = d.results && d.results[0] && d.results[0].url;
       if (url) showResult(url, lastPayload ? lastPayload.prompt : "");
-      else showError("The model reported success but returned no image.");
+      else showError("模型返回成功，但没有给出图像。");
     }
   };
 
@@ -237,7 +277,14 @@
     lastPayload = payload;
     panelNote.hidden = true;
     setBusy(true);
-    setProgress(0, "starting");
+    canvas.style.setProperty("--canvas-ratio", ratioToCss(payload.aspectRatio));
+    if (payload.shutProgress) {
+      setIndeterminate(true);
+      setProgress(0, "生成中（已关闭进度推送）");
+    } else {
+      setIndeterminate(false);
+      setProgress(0, "准备中");
+    }
     setState("loading");
 
     let res;
@@ -248,11 +295,11 @@
         body: JSON.stringify(payload),
       });
     } catch {
-      showError("Could not reach the server. Check your connection and try again.");
+      showError("无法连接到服务器，请检查网络后重试。");
       return;
     }
     if (!res.ok || !res.body) {
-      showError("The server rejected the request (HTTP " + res.status + ").");
+      showError("服务器拒绝了请求（HTTP " + res.status + "）。");
       return;
     }
 
@@ -280,16 +327,17 @@
         handleEvent(buf);
       }
     } catch {
-      if (!sawSuccess) showError("The connection dropped while rendering. Please try again.");
+      if (!sawSuccess) showError("渲染过程中连接中断，请重试。");
     } finally {
       setBusy(false);
+      setIndeterminate(false);
       if (!sawSuccess && canvas.dataset.state === "loading") {
-        showError("The stream ended before an image was produced. Please try again.");
+        showError("数据流在产出图像前结束了，请重试。");
       }
     }
   };
 
-  /* ---------- submit ---------- */
+  /* ---------- 提交 ---------- */
   form.addEventListener("submit", (e) => {
     e.preventDefault();
     const prompt = promptEl.value.trim();
@@ -297,14 +345,23 @@
       promptEl.focus();
       return;
     }
-    runGeneration({ prompt, aspectRatio: currentRatio(), urls: refValues() });
+    const payload = {
+      prompt,
+      aspectRatio: activeRatio(),
+      urls: refValues(),
+      shutProgress: !!(shutProgressEl && shutProgressEl.checked),
+    };
+    if (modelInput && modelInput.value.trim()) payload.model = modelInput.value.trim();
+    if (webhookInput && webhookInput.value.trim()) payload.webHook = webhookInput.value.trim();
+    runGeneration(payload);
   });
 
-  /* ---------- gallery samples ---------- */
+  /* ---------- 示例卡片 ---------- */
   $$(".sample").forEach((btn) => {
     btn.addEventListener("click", () => {
       promptEl.value = btn.dataset.prompt || "";
       updateCount();
+      if (customSize) customSize.value = "";
       const ratio = btn.dataset.ratio;
       const target = form.querySelector(`input[name="ratio"][value="${ratio}"]`);
       if (target) {
@@ -316,26 +373,28 @@
     });
   });
 
-  /* ---------- backend status ---------- */
+  /* ---------- 服务状态 ---------- */
   (async () => {
     const pill = $("#statusPill");
     const txt = $("#statusText");
     try {
       const r = await fetch("/api/config");
       const cfg = await r.json();
+      if (cfg && cfg.model && panelModel && !modelInput.value.trim()) {
+        panelModel.textContent = "模型 · " + cfg.model;
+      }
       if (cfg.apiKeyConfigured) {
         pill.classList.add("is-ok");
-        txt.textContent = "online";
+        txt.textContent = "在线";
       } else {
         pill.classList.add("is-down");
-        txt.textContent = "no api key";
+        txt.textContent = "未配置密钥";
         panelNote.hidden = false;
-        panelNote.textContent =
-          "Heads up: the server has no GRSAI_API_KEY set, so generation will fail until it is configured.";
+        panelNote.textContent = "注意：服务端尚未配置 GRSAI_API_KEY，生成会失败，请先设置密钥。";
       }
     } catch {
       pill.classList.add("is-down");
-      txt.textContent = "offline";
+      txt.textContent = "离线";
     }
   })();
 })();
