@@ -44,6 +44,12 @@ GRSAI_API_KEY = os.environ.get("GRSAI_API_KEY", "").strip()
 # mainland-China direct host.
 GRSAI_BASE_URL = os.environ.get("GRSAI_BASE_URL", "https://grsaiapi.com").rstrip("/")
 GRSAI_MODEL = os.environ.get("GRSAI_MODEL", "gpt-image-2")
+# Optional explicit public base URL for uploaded reference images. Set this when
+# the app sits behind a proxy/tunnel whose host (or credentials) cannot be
+# derived from request headers, so the upstream API can fetch uploads. May
+# include userinfo, e.g. https://user:pass@host, for a basic-auth-protected
+# tunnel.
+PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "").strip().rstrip("/")
 
 # Aspect-ratio presets surfaced in the UI. gpt-image-2 honours ratio strings
 # (e.g. "16:9") accurately, so we expose the documented ratio set. The upstream
@@ -209,6 +215,8 @@ def _public_base_url(request: Request) -> str:
     ``X-Forwarded-*`` headers; we use them so the returned upload URL is one the
     upstream image API can actually fetch.
     """
+    if PUBLIC_BASE_URL:
+        return PUBLIC_BASE_URL
     forwarded_host = request.headers.get("x-forwarded-host")
     host = forwarded_host or request.headers.get("host")
     if not host:
@@ -234,8 +242,16 @@ async def upload(request: Request, file: Annotated[UploadFile, File()]) -> JSONR
         raise HTTPException(status_code=413, detail="图片过大，请上传 12MB 以内的图片。")
     name = f"{uuid.uuid4().hex}{ext}"
     (UPLOAD_DIR / name).write_bytes(data)
+    path = f"/uploads/{name}"
+    # ``url`` may carry credentials (for the upstream fetch); ``path`` is a
+    # same-origin relative URL the browser can use for the thumbnail (browsers
+    # block embedded credentials in <img> subresource requests).
     return JSONResponse(
-        {"url": f"{_public_base_url(request)}/uploads/{name}", "name": file.filename or name}
+        {
+            "url": f"{_public_base_url(request)}{path}",
+            "path": path,
+            "name": file.filename or name,
+        }
     )
 
 

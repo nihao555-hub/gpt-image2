@@ -87,6 +87,7 @@ Open http://localhost:8000.
 | `GRSAI_API_KEY`  | (required)              | grsai API key, sent as a Bearer token.        |
 | `GRSAI_BASE_URL` | `https://grsaiapi.com`  | Use `https://grsai.dakka.com.cn` for CN host. |
 | `GRSAI_MODEL`    | `gpt-image-2`           | Model name passed to the API.                 |
+| `PUBLIC_BASE_URL`| (derived from headers)  | Explicit public base for uploaded images when behind a proxy/tunnel; may include `user:pass@` for a basic-auth tunnel so the upstream API can fetch uploads. |
 
 ## Project layout
 

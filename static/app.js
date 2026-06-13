@@ -145,7 +145,7 @@
       const fig = document.createElement("figure");
       fig.className = "thumb";
       const img = document.createElement("img");
-      img.src = u.url;
+      img.src = u.path || u.url;
       img.alt = u.name || "参考图";
       img.loading = "lazy";
       const remove = document.createElement("button");
@@ -199,7 +199,11 @@
           continue;
         }
         if (data && data.url) {
-          uploads.push({ url: data.url, name: data.name || file.name });
+          uploads.push({
+            url: data.url,
+            path: data.path || data.url,
+            name: data.name || file.name,
+          });
           renderThumbs();
         }
       }
