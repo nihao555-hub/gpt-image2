@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>gpt-image-2 Studio</title>
+    <meta
+      name="description"
+      content="A playground for the gpt-image-2 model. Write a prompt, choose a ratio, add reference images, and watch it render live."
+    />
+    <link rel="preconnect" href="/" />
+    <link rel="stylesheet" href="/styles.css" />
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230a0a0c'/%3E%3Cpath d='M9 21 L16 8 L23 21 Z' fill='none' stroke='%23ff5a36' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E" />
+  </head>
+  <body>
+    <header class="nav" data-reveal>
+      <a class="brand" href="/" aria-label="gpt-image-2 Studio home">
+        <svg class="brand__mark" viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="8" fill="none" stroke="currentColor" stroke-opacity="0.18" />
+          <path d="M9 21 L16 8 L23 21 Z" fill="none" stroke="var(--accent)" stroke-width="2.4" stroke-linejoin="round" />
+          <circle cx="16" cy="21" r="1.6" fill="var(--accent)" />
+        </svg>
+        <span class="brand__name">gpt-image-2 <span class="brand__tag">studio</span></span>
+      </a>
+      <nav class="nav__links">
+        <span class="status-pill" id="statusPill" title="Backend status">
+          <span class="status-pill__dot"></span>
+          <span id="statusText">checking</span>
+        </span>
+        <a class="nav__link" href="#studio">Open studio</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero">
+        <div class="hero__copy" data-reveal>
+          <p class="eyebrow">Image generation playground</p>
+          <h1 class="hero__title">Describe it.<br /><em>Render it.</em></h1>
+          <p class="hero__sub">
+            A hands-on playground for gpt-image-2. Write a prompt, choose a ratio,
+            optionally add reference images, and watch the result render live.
+          </p>
+          <div class="hero__actions">
+            <a class="btn btn--primary" href="#studio">Start creating</a>
+            <a class="btn btn--ghost" href="#gallery">See examples</a>
+          </div>
+        </div>
+        <figure class="hero__art" data-reveal data-reveal-delay="1">
+          <img
+            id="heroArt"
+            src="/showcase/coast.webp"
+            alt="A render from gpt-image-2: a coastal road along emerald sea cliffs at golden hour"
+            loading="eager"
+          />
+          <figcaption class="hero__art-caption">
+            <span class="mono">output</span> coastal cliffs at golden hour
+          </figcaption>
+        </figure>
+      </section>
+
+      <section class="studio" id="studio">
+        <form class="panel" id="genForm" autocomplete="off">
+          <div class="panel__head">
+            <h2 class="panel__title">Generate</h2>
+            <span class="mono panel__model">model: gpt-image-2</span>
+          </div>
+
+          <div class="field">
+            <label class="field__label" for="prompt">Prompt</label>
+            <textarea
+              id="prompt"
+              name="prompt"
+              class="field__textarea"
+              rows="4"
+              maxlength="4000"
+              placeholder="A neon-lit ramen stall in the rain, cinematic, 35mm"
+              required
+            ></textarea>
+            <div class="field__meta">
+              <span class="field__hint">Be specific about subject, lighting and style.</span>
+              <span class="field__count"><span id="promptCount">0</span>/4000</span>
+            </div>
+          </div>
+
+          <div class="field">
+            <span class="field__label">Aspect ratio</span>
+            <div class="segmented" role="radiogroup" aria-label="Aspect ratio" id="ratioGroup">
+              <label class="segmented__opt">
+                <input type="radio" name="ratio" value="1024x1024" checked />
+                <span>1:1<small>square</small></span>
+              </label>
+              <label class="segmented__opt">
+                <input type="radio" name="ratio" value="1536x1024" />
+                <span>3:2<small>landscape</small></span>
+              </label>
+              <label class="segmented__opt">
+                <input type="radio" name="ratio" value="1024x1536" />
+                <span>2:3<small>portrait</small></span>
+              </label>
+              <label class="segmented__opt">
+                <input type="radio" name="ratio" value="auto" />
+                <span>Auto<small>model picks</small></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field">
+            <button type="button" class="disclosure" id="refToggle" aria-expanded="false" aria-controls="refPanel">
+              <span class="disclosure__chevron" aria-hidden="true">+</span>
+              Reference images <span class="field__hint">optional, for image-to-image</span>
+            </button>
+            <div class="ref" id="refPanel" hidden>
+              <div class="ref__rows" id="refRows"></div>
+              <button type="button" class="ref__add" id="refAdd">Add image URL</button>
+              <p class="field__hint">Paste up to 4 public image URLs. gpt-image-2 edits and remixes them with your prompt.</p>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn--primary btn--block" id="generateBtn">
+            <span class="btn__label">Generate image</span>
+          </button>
+          <p class="panel__note" id="panelNote" hidden></p>
+        </form>
+
+        <div class="canvas" id="canvas" data-state="empty" style="--canvas-ratio: 1 / 1">
+          <!-- EMPTY -->
+          <div class="canvas__empty state">
+            <svg viewBox="0 0 48 48" class="canvas__icon" aria-hidden="true">
+              <rect x="6" y="9" width="36" height="30" rx="4" fill="none" stroke="currentColor" stroke-width="1.6" />
+              <circle cx="17" cy="20" r="3.4" fill="none" stroke="currentColor" stroke-width="1.6" />
+              <path d="M9 35 L20 25 L28 31 L34 26 L39 31" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" stroke-linecap="round" />
+            </svg>
+            <p class="canvas__title">Your render appears here</p>
+            <p class="canvas__hint">Write a prompt and press generate.</p>
+          </div>
+
+          <!-- LOADING -->
+          <div class="canvas__loading state">
+            <div class="skeleton" aria-hidden="true"></div>
+            <div class="progress">
+              <div class="progress__bar"><span id="progressFill"></span></div>
+              <div class="progress__meta">
+                <span class="mono" id="progressStatus">starting</span>
+                <span class="mono" id="progressPct">0%</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- RESULT -->
+          <figure class="canvas__result state">
+            <img id="resultImg" alt="Generated image" />
+            <figcaption class="result__bar">
+              <p class="result__prompt" id="resultPrompt"></p>
+              <div class="result__actions">
+                <a class="btn btn--sm btn--ghost" id="downloadBtn" download="gpt-image-2.png">Download</a>
+                <a class="btn btn--sm btn--ghost" id="openBtn" target="_blank" rel="noopener">Open</a>
+                <button type="button" class="btn btn--sm btn--ghost" id="useRefBtn">Use as reference</button>
+              </div>
+            </figcaption>
+          </figure>
+
+          <!-- ERROR -->
+          <div class="canvas__error state">
+            <svg viewBox="0 0 48 48" class="canvas__icon" aria-hidden="true">
+              <circle cx="24" cy="24" r="17" fill="none" stroke="currentColor" stroke-width="1.6" />
+              <path d="M24 15 V27" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              <circle cx="24" cy="32.5" r="1.4" fill="currentColor" />
+            </svg>
+            <p class="canvas__title">Generation failed</p>
+            <p class="canvas__hint" id="errorText">Something went wrong.</p>
+            <button type="button" class="btn btn--sm btn--primary" id="retryBtn">Try again</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="gallery" id="gallery">
+        <div class="gallery__head" data-reveal>
+          <p class="eyebrow">Made with gpt-image-2</p>
+          <h2 class="gallery__title">A few renders to start from</h2>
+          <p class="gallery__sub">Tap any example to load its prompt into the studio.</p>
+        </div>
+        <div class="gallery__grid" id="galleryGrid">
+          <button class="sample" type="button" data-prompt="Aerial cinematic view of a winding coastal road along emerald sea cliffs at golden hour, long shadows, ultra detailed landscape photography" data-ratio="1536x1024">
+            <img src="/showcase/coast.webp" alt="Coastal road along sea cliffs at golden hour" loading="lazy" />
+            <span class="sample__caption">Coastal cliffs, golden hour</span>
+          </button>
+          <button class="sample" type="button" data-prompt="Studio portrait of a snow leopard in misty alpine forest, dramatic rim light, shallow depth of field, photorealistic, fine fur detail" data-ratio="1024x1536">
+            <img src="/showcase/leopard.webp" alt="Portrait of a snow leopard in misty forest" loading="lazy" />
+            <span class="sample__caption">Snow leopard, rim light</span>
+          </button>
+          <button class="sample" type="button" data-prompt="A sculptural matte ceramic vase holding dried pampas grass, soft directional window light, minimalist studio still life, warm neutral palette, editorial product photography, high detail" data-ratio="1024x1024">
+            <img src="/showcase/still-life.webp" alt="Ceramic vase with pampas grass still life" loading="lazy" />
+            <span class="sample__caption">Ceramic still life</span>
+          </button>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <span class="mono">gpt-image-2 studio</span>
+      <span class="footer__dim">Renders served live through the grsai image API.</span>
+    </footer>
+
+    <script src="/app.js"></script>
+  </body>
+</html>
