@@ -155,37 +155,6 @@
             </div>
           </div>
 
-          <div class="field">
-            <button type="button" class="disclosure" id="advToggle" aria-expanded="false" aria-controls="advPanel">
-              <span class="disclosure__chevron" aria-hidden="true">+</span>
-              高级参数 <span class="field__hint">可选，对齐 API 文档</span>
-            </button>
-            <div class="adv" id="advPanel" hidden>
-              <div class="adv__field">
-                <label class="field__label" for="modelInput">模型 <span class="mono adv__key">model</span></label>
-                <input id="modelInput" class="adv__input" type="text" value="gpt-image-2" placeholder="gpt-image-2" />
-              </div>
-              <div class="adv__field">
-                <label class="field__label" for="customSize">自定义尺寸 <span class="mono adv__key">aspectRatio</span></label>
-                <input id="customSize" class="adv__input mono" type="text" inputmode="text" placeholder="例如 16:9 或 1280x720，留空则用上方尺寸" />
-                <p class="field__hint">填写后会覆盖上方的尺寸选择。</p>
-              </div>
-              <div class="adv__field">
-                <label class="field__label" for="webhookInput">回调地址 <span class="mono adv__key">webHook</span></label>
-                <input id="webhookInput" class="adv__input mono" type="url" placeholder="https://example.com/callback" />
-                <p class="field__hint">可选，生成完成后服务端会回调该地址。</p>
-              </div>
-              <label class="toggle" for="shutProgress">
-                <input type="checkbox" id="shutProgress" />
-                <span class="toggle__track" aria-hidden="true"><span class="toggle__thumb"></span></span>
-                <span class="toggle__text">
-                  关闭进度推送 <span class="mono adv__key">shutProgress</span>
-                  <small class="field__hint">开启后只返回最终结果，不推送中间进度。</small>
-                </span>
-              </label>
-            </div>
-          </div>
-
           <button type="submit" class="btn btn--primary btn--block" id="generateBtn">
             <span class="btn__label">生成图像</span>
           </button>

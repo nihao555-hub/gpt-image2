@@ -7,6 +7,14 @@
 
   const MAX_REFS = 4;
 
+  // Build a same-origin API URL from location.origin (which never carries
+  // userinfo). The page may be opened via a credentialed URL
+  // (https://user:pass@host) behind a basic-auth tunnel; relative fetch()
+  // would then inherit those credentials and the Fetch API throws
+  // "Request cannot be constructed from a URL that includes credentials".
+  // Cached basic-auth is still applied to the credential-free same-origin URL.
+  const apiUrl = (path) => location.origin + path;
+
   const ratioToCss = (val) => {
     const v = (val || "").trim();
     if (!v || v === "auto") return "1 / 1";
@@ -23,7 +31,6 @@
   const canvas = $("#canvas");
   const generateBtn = $("#generateBtn");
   const panelNote = $("#panelNote");
-  const panelModel = $("#panelModel");
 
   const progress = $("#progress");
   const progressFill = $("#progressFill");
@@ -45,13 +52,6 @@
   const dropzone = $("#dropzone");
   const fileInput = $("#fileInput");
   const thumbs = $("#thumbs");
-
-  const advToggle = $("#advToggle");
-  const advPanel = $("#advPanel");
-  const modelInput = $("#modelInput");
-  const customSize = $("#customSize");
-  const webhookInput = $("#webhookInput");
-  const shutProgressEl = $("#shutProgress");
 
   let lastPayload = null;
   let inFlight = false;
@@ -78,15 +78,14 @@
   updateCount();
 
   /* ---------- 尺寸 -> 画布比例 ---------- */
-  const checkedRatio = () => form.querySelector('input[name="ratio"]:checked').value;
-  const activeRatio = () => (customSize && customSize.value.trim()) || checkedRatio();
+  const activeRatio = () => form.querySelector('input[name="ratio"]:checked').value;
   const syncCanvasRatio = () => {
     canvas.style.setProperty("--canvas-ratio", ratioToCss(activeRatio()));
   };
   $$('input[name="ratio"]').forEach((r) => r.addEventListener("change", syncCanvasRatio));
   syncCanvasRatio();
 
-  /* ---------- 高级参数 ---------- */
+  /* ---------- 折叠面板 ---------- */
   const toggleDisclosure = (toggle, panel, onOpen) => {
     toggle.addEventListener("click", () => {
       const willOpen = panel.hasAttribute("hidden");
@@ -100,17 +99,6 @@
       }
     });
   };
-  toggleDisclosure(advToggle, advPanel);
-
-  if (modelInput) {
-    modelInput.addEventListener("input", () => {
-      const name = modelInput.value.trim() || "gpt-image-2";
-      panelModel.textContent = "模型 · " + name;
-    });
-  }
-  if (customSize) {
-    customSize.addEventListener("input", syncCanvasRatio);
-  }
 
   /* ---------- 参考图 ---------- */
   // Uploaded reference images: [{ url, name }]. Combined with pasted URL rows.
@@ -188,7 +176,7 @@
         fd.append("file", file);
         let data;
         try {
-          const r = await fetch("/api/upload", { method: "POST", body: fd });
+          const r = await fetch(apiUrl("/api/upload"), { method: "POST", body: fd });
           data = await r.json().catch(() => ({}));
           if (!r.ok) {
             setDropMsg(data.detail || "上传失败，请重试");
@@ -401,18 +389,13 @@
     panelNote.hidden = true;
     setBusy(true);
     canvas.style.setProperty("--canvas-ratio", ratioToCss(payload.aspectRatio));
-    if (payload.shutProgress) {
-      setIndeterminate(true);
-      setProgress(0, "生成中（已关闭进度推送）");
-    } else {
-      setIndeterminate(false);
-      setProgress(0, "准备中");
-    }
+    setIndeterminate(false);
+    setProgress(0, "准备中");
     setState("loading");
 
     let res;
     try {
-      res = await fetch("/api/generate", {
+      res = await fetch(apiUrl("/api/generate"), {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
@@ -472,10 +455,7 @@
       prompt,
       aspectRatio: activeRatio(),
       urls: gatherRefs(),
-      shutProgress: !!(shutProgressEl && shutProgressEl.checked),
     };
-    if (modelInput && modelInput.value.trim()) payload.model = modelInput.value.trim();
-    if (webhookInput && webhookInput.value.trim()) payload.webHook = webhookInput.value.trim();
     runGeneration(payload);
   });
 
@@ -484,7 +464,6 @@
     btn.addEventListener("click", () => {
       promptEl.value = btn.dataset.prompt || "";
       updateCount();
-      if (customSize) customSize.value = "";
       const ratio = btn.dataset.ratio;
       const target = form.querySelector(`input[name="ratio"][value="${ratio}"]`);
       if (target) {
@@ -501,11 +480,8 @@
     const pill = $("#statusPill");
     const txt = $("#statusText");
     try {
-      const r = await fetch("/api/config");
+      const r = await fetch(apiUrl("/api/config"));
       const cfg = await r.json();
-      if (cfg && cfg.model && panelModel && !modelInput.value.trim()) {
-        panelModel.textContent = "模型 · " + cfg.model;
-      }
       if (cfg.apiKeyConfigured) {
         pill.classList.add("is-ok");
         txt.textContent = "在线";
