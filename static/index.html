@@ -82,21 +82,49 @@
           </div>
 
           <div class="field">
-            <span class="field__label">图像尺寸</span>
-            <div class="segmented" role="radiogroup" aria-label="图像尺寸" id="ratioGroup">
-              <label class="segmented__opt">
-                <input type="radio" name="ratio" value="1024x1024" checked />
+            <span class="field__label">图像尺寸 <span class="field__hint">比例对齐 gpt-image-2 文档</span></span>
+            <div class="ratio-grid" role="radiogroup" aria-label="图像尺寸" id="ratioGroup">
+              <label class="ratio-opt">
+                <input type="radio" name="ratio" value="1:1" checked />
                 <span>1:1<small>正方形</small></span>
               </label>
-              <label class="segmented__opt">
-                <input type="radio" name="ratio" value="1536x1024" />
+              <label class="ratio-opt">
+                <input type="radio" name="ratio" value="3:2" />
                 <span>3:2<small>横向</small></span>
               </label>
-              <label class="segmented__opt">
-                <input type="radio" name="ratio" value="1024x1536" />
+              <label class="ratio-opt">
+                <input type="radio" name="ratio" value="2:3" />
                 <span>2:3<small>竖向</small></span>
               </label>
-              <label class="segmented__opt">
+              <label class="ratio-opt">
+                <input type="radio" name="ratio" value="4:3" />
+                <span>4:3<small>横向</small></span>
+              </label>
+              <label class="ratio-opt">
+                <input type="radio" name="ratio" value="3:4" />
+                <span>3:4<small>竖向</small></span>
+              </label>
+              <label class="ratio-opt">
+                <input type="radio" name="ratio" value="5:4" />
+                <span>5:4<small>横向</small></span>
+              </label>
+              <label class="ratio-opt">
+                <input type="radio" name="ratio" value="4:5" />
+                <span>4:5<small>竖向</small></span>
+              </label>
+              <label class="ratio-opt">
+                <input type="radio" name="ratio" value="16:9" />
+                <span>16:9<small>宽屏</small></span>
+              </label>
+              <label class="ratio-opt">
+                <input type="radio" name="ratio" value="9:16" />
+                <span>9:16<small>竖屏</small></span>
+              </label>
+              <label class="ratio-opt">
+                <input type="radio" name="ratio" value="21:9" />
+                <span>21:9<small>超宽</small></span>
+              </label>
+              <label class="ratio-opt">
                 <input type="radio" name="ratio" value="auto" />
                 <span>自动<small>模型决定</small></span>
               </label>
@@ -109,9 +137,21 @@
               参考图 <span class="field__hint">可选，用于图生图</span>
             </button>
             <div class="ref" id="refPanel" hidden>
-              <div class="ref__rows" id="refRows"></div>
-              <button type="button" class="ref__add" id="refAdd">添加图片链接</button>
-              <p class="field__hint">最多 4 个公网图片链接，gpt-image-2 会结合提示词进行改绘。</p>
+              <div class="drop" id="dropzone" role="button" tabindex="0" aria-label="上传参考图：点击选择文件，或将图片拖拽到此处">
+                <input id="fileInput" type="file" accept="image/png,image/jpeg,image/webp" multiple hidden />
+                <svg class="drop__icon" viewBox="0 0 48 48" aria-hidden="true">
+                  <path d="M24 32 V14 M16 22 L24 14 L32 22" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                  <path d="M10 30 V34 a2 2 0 0 0 2 2 H36 a2 2 0 0 0 2-2 V30" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                </svg>
+                <p class="drop__title">点击上传，或将图片拖拽到此处</p>
+                <p class="drop__hint">支持 JPG / PNG / WEBP，最多 4 张</p>
+              </div>
+              <div class="thumbs" id="thumbs" hidden></div>
+              <div class="ref__urls">
+                <div class="ref__rows" id="refRows"></div>
+                <button type="button" class="ref__add" id="refAdd">或粘贴图片链接</button>
+              </div>
+              <p class="field__hint">参考图会随提示词一起用于图生图，最多 4 张（上传与链接合计）。</p>
             </div>
           </div>
 
@@ -127,7 +167,7 @@
               </div>
               <div class="adv__field">
                 <label class="field__label" for="customSize">自定义尺寸 <span class="mono adv__key">aspectRatio</span></label>
-                <input id="customSize" class="adv__input mono" type="text" inputmode="text" placeholder="例如 1280x720，留空则用上方尺寸" />
+                <input id="customSize" class="adv__input mono" type="text" inputmode="text" placeholder="例如 16:9 或 1280x720，留空则用上方尺寸" />
                 <p class="field__hint">填写后会覆盖上方的尺寸选择。</p>
               </div>
               <div class="adv__field">
@@ -209,15 +249,15 @@
           <p class="gallery__sub">点击任意示例，把它的提示词载入工作台。</p>
         </div>
         <div class="gallery__grid" id="galleryGrid">
-          <button class="sample" type="button" data-prompt="金色时分的航拍镜头，蜿蜒的海岸公路依偎着翠绿的海崖，长长的光影，超精细风光摄影" data-ratio="1536x1024">
+          <button class="sample" type="button" data-prompt="金色时分的航拍镜头，蜿蜒的海岸公路依偎着翠绿的海崖，长长的光影，超精细风光摄影" data-ratio="3:2">
             <img src="/showcase/coast.webp" alt="金色时分的海岸公路" loading="lazy" />
             <span class="sample__caption">金色海岸公路</span>
           </button>
-          <button class="sample" type="button" data-prompt="雾气弥漫的高山森林中，一只雪豹的影棚肖像，戏剧性的轮廓光，浅景深，照片级真实，细腻的毛发细节" data-ratio="1024x1536">
+          <button class="sample" type="button" data-prompt="雾气弥漫的高山森林中，一只雪豹的影棚肖像，戏剧性的轮廓光，浅景深，照片级真实，细腻的毛发细节" data-ratio="2:3">
             <img src="/showcase/leopard.webp" alt="雾林中的雪豹肖像" loading="lazy" />
             <span class="sample__caption">雪豹 · 轮廓光</span>
           </button>
-          <button class="sample" type="button" data-prompt="一只哑光陶瓷花瓶插着干芦苇，柔和的侧向窗光，极简影棚静物，温暖中性色调，杂志级产品摄影，高细节" data-ratio="1024x1024">
+          <button class="sample" type="button" data-prompt="一只哑光陶瓷花瓶插着干芦苇，柔和的侧向窗光，极简影棚静物，温暖中性色调，杂志级产品摄影，高细节" data-ratio="1:1">
             <img src="/showcase/still-life.webp" alt="干芦苇陶瓷花瓶静物" loading="lazy" />
             <span class="sample__caption">陶瓷静物</span>
           </button>

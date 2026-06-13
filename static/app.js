@@ -5,17 +5,14 @@
   const $ = (sel, root = document) => root.querySelector(sel);
   const $$ = (sel, root = document) => Array.from(root.querySelectorAll(sel));
 
-  const RATIO_TO_CSS = {
-    "1024x1024": "1 / 1",
-    "1536x1024": "3 / 2",
-    "1024x1536": "2 / 3",
-    auto: "1 / 1",
-  };
   const MAX_REFS = 4;
 
   const ratioToCss = (val) => {
-    if (RATIO_TO_CSS[val]) return RATIO_TO_CSS[val];
-    const m = /^(\d{2,5})x(\d{2,5})$/.exec((val || "").trim());
+    const v = (val || "").trim();
+    if (!v || v === "auto") return "1 / 1";
+    let m = /^(\d{2,5})x(\d{2,5})$/.exec(v); // pixels, e.g. 1280x720
+    if (m) return `${m[1]} / ${m[2]}`;
+    m = /^(\d{1,4}):(\d{1,4})$/.exec(v); // ratio, e.g. 16:9
     if (m) return `${m[1]} / ${m[2]}`;
     return "1 / 1";
   };
@@ -45,6 +42,9 @@
   const refPanel = $("#refPanel");
   const refRows = $("#refRows");
   const refAdd = $("#refAdd");
+  const dropzone = $("#dropzone");
+  const fileInput = $("#fileInput");
+  const thumbs = $("#thumbs");
 
   const advToggle = $("#advToggle");
   const advPanel = $("#advPanel");
@@ -113,17 +113,137 @@
   }
 
   /* ---------- 参考图 ---------- */
+  // Uploaded reference images: [{ url, name }]. Combined with pasted URL rows.
+  const uploads = [];
+
   const refValues = () =>
     $$(".ref__row input", refRows)
       .map((i) => i.value.trim())
       .filter(Boolean);
 
+  // All reference URLs sent to the API: uploads first, then pasted links.
+  const gatherRefs = () =>
+    [...uploads.map((u) => u.url), ...refValues()].slice(0, MAX_REFS);
+
+  const refCount = () => uploads.length + $$(".ref__row", refRows).length;
+
   const syncRefAdd = () => {
-    refAdd.disabled = $$(".ref__row", refRows).length >= MAX_REFS;
+    const full = refCount() >= MAX_REFS;
+    refAdd.disabled = full;
+    if (dropzone) dropzone.classList.toggle("is-full", full);
   };
 
+  const renderThumbs = () => {
+    thumbs.innerHTML = "";
+    if (uploads.length === 0) {
+      thumbs.hidden = true;
+      syncRefAdd();
+      return;
+    }
+    thumbs.hidden = false;
+    uploads.forEach((u, idx) => {
+      const fig = document.createElement("figure");
+      fig.className = "thumb";
+      const img = document.createElement("img");
+      img.src = u.url;
+      img.alt = u.name || "参考图";
+      img.loading = "lazy";
+      const remove = document.createElement("button");
+      remove.type = "button";
+      remove.className = "thumb__remove";
+      remove.setAttribute("aria-label", "移除这张参考图");
+      remove.textContent = "\u00d7";
+      remove.addEventListener("click", () => {
+        uploads.splice(idx, 1);
+        renderThumbs();
+      });
+      fig.append(img, remove);
+      thumbs.append(fig);
+    });
+    syncRefAdd();
+  };
+
+  const setDropMsg = (msg) => {
+    const title = $(".drop__title", dropzone);
+    if (title) title.textContent = msg;
+  };
+
+  const uploadFiles = async (fileList) => {
+    const files = Array.from(fileList || []);
+    if (files.length === 0) return;
+    dropzone.classList.add("is-uploading");
+    const defaultMsg = "点击上传，或将图片拖拽到此处";
+    try {
+      for (const file of files) {
+        if (refCount() >= MAX_REFS) {
+          setDropMsg("最多只能添加 4 张参考图");
+          break;
+        }
+        if (!/^image\/(png|jpe?g|webp)$/i.test(file.type)) {
+          setDropMsg("仅支持 JPG / PNG / WEBP 格式");
+          continue;
+        }
+        setDropMsg("上传中… " + file.name);
+        const fd = new FormData();
+        fd.append("file", file);
+        let data;
+        try {
+          const r = await fetch("/api/upload", { method: "POST", body: fd });
+          data = await r.json().catch(() => ({}));
+          if (!r.ok) {
+            setDropMsg(data.detail || "上传失败，请重试");
+            continue;
+          }
+        } catch {
+          setDropMsg("上传失败，请检查网络后重试");
+          continue;
+        }
+        if (data && data.url) {
+          uploads.push({ url: data.url, name: data.name || file.name });
+          renderThumbs();
+        }
+      }
+    } finally {
+      dropzone.classList.remove("is-uploading");
+      setTimeout(() => setDropMsg(defaultMsg), 1600);
+    }
+  };
+
+  if (dropzone && fileInput) {
+    dropzone.addEventListener("click", () => {
+      if (refCount() < MAX_REFS) fileInput.click();
+    });
+    dropzone.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" || e.key === " ") {
+        e.preventDefault();
+        if (refCount() < MAX_REFS) fileInput.click();
+      }
+    });
+    fileInput.addEventListener("change", () => {
+      uploadFiles(fileInput.files);
+      fileInput.value = "";
+    });
+    ["dragenter", "dragover"].forEach((evt) =>
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        dropzone.classList.add("is-drag");
+      }),
+    );
+    ["dragleave", "dragend"].forEach((evt) =>
+      dropzone.addEventListener(evt, (e) => {
+        e.preventDefault();
+        dropzone.classList.remove("is-drag");
+      }),
+    );
+    dropzone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      dropzone.classList.remove("is-drag");
+      if (e.dataTransfer && e.dataTransfer.files) uploadFiles(e.dataTransfer.files);
+    });
+  }
+
   const addRefRow = (value = "") => {
-    if ($$(".ref__row", refRows).length >= MAX_REFS) return;
+    if (refCount() >= MAX_REFS) return;
     const row = document.createElement("div");
     row.className = "ref__row";
     const input = document.createElement("input");
@@ -145,9 +265,7 @@
     return input;
   };
 
-  toggleDisclosure(refToggle, refPanel, () => {
-    if ($$(".ref__row", refRows).length === 0) addRefRow();
-  });
+  toggleDisclosure(refToggle, refPanel);
   refAdd.addEventListener("click", () => {
     const input = addRefRow();
     if (input) input.focus();
@@ -156,6 +274,7 @@
   const openRefWith = (url) => {
     refPanel.removeAttribute("hidden");
     refToggle.setAttribute("aria-expanded", "true");
+    if (refCount() >= MAX_REFS) return;
     const empty = $$(".ref__row input", refRows).find((i) => !i.value.trim());
     if (empty) empty.value = url;
     else addRefRow(url);
@@ -348,7 +467,7 @@
     const payload = {
       prompt,
       aspectRatio: activeRatio(),
-      urls: refValues(),
+      urls: gatherRefs(),
       shutProgress: !!(shutProgressEl && shutProgressEl.checked),
     };
     if (modelInput && modelInput.value.trim()) payload.model = modelInput.value.trim();

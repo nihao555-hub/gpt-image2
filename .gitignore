@@ -13,3 +13,6 @@ venv/
 # OS / editor
 .DS_Store
 *.log
+
+# User-uploaded reference images (runtime data)
+uploads/
