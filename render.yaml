@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: gpt-image2-studio
+    runtime: python
+    buildCommand: pip install -e .
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    envVars:
+      - key: GRSAI_API_KEY
+        sync: false
+      - key: GRSAI_BASE_URL
+        value: https://grsaiapi.com
+      - key: GRSAI_MODEL
+        value: gpt-image-2
+      - key: PYTHON_VERSION
+        value: "3.12"
