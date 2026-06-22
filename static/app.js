@@ -77,6 +77,38 @@
   promptEl.addEventListener("input", updateCount);
   updateCount();
 
+  /* ---------- 模型选择 ---------- */
+  const panelModel = $("#panelModel");
+  const activeModel = () => {
+    const el = form.querySelector('input[name="model"]:checked');
+    return el ? el.value : "gpt-image-2";
+  };
+  const syncPanelModel = () => {
+    if (panelModel) panelModel.textContent = "模型 · " + activeModel();
+  };
+  $$('input[name="model"]').forEach((r) => r.addEventListener("change", syncPanelModel));
+  syncPanelModel();
+
+  // gpt-image-2-vip 不支持比例字符串，只接受像素值；按官方分辨率表取 1K 档。
+  const VIP_RATIO_TO_PX = {
+    "1:1": "1024x1024",
+    "3:2": "1536x1024",
+    "2:3": "1024x1536",
+    "4:3": "1152x864",
+    "3:4": "864x1152",
+    "5:4": "1120x896",
+    "4:5": "896x1120",
+    "16:9": "1280x720",
+    "9:16": "720x1280",
+    "21:9": "1456x624",
+    "auto": "auto",
+  };
+  const sizeForModel = (model, ratio) => {
+    if (model !== "gpt-image-2-vip") return ratio;
+    if (/^\d{2,5}x\d{2,5}$/.test(ratio)) return ratio;
+    return VIP_RATIO_TO_PX[ratio] || "1024x1024";
+  };
+
   /* ---------- 尺寸 -> 画布比例 ---------- */
   const activeRatio = () => form.querySelector('input[name="ratio"]:checked').value;
   const syncCanvasRatio = () => {
@@ -451,9 +483,11 @@
       promptEl.focus();
       return;
     }
+    const model = activeModel();
     const payload = {
       prompt,
-      aspectRatio: activeRatio(),
+      model,
+      aspectRatio: sizeForModel(model, activeRatio()),
       urls: gatherRefs(),
     };
     runGeneration(payload);
