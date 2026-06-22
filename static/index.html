@@ -65,6 +65,20 @@
           </div>
 
           <div class="field">
+            <span class="field__label">模型 <span class="field__hint">gpt-image-2-vip 画质更优</span></span>
+            <div class="ratio-grid" role="radiogroup" aria-label="模型" id="modelGroup">
+              <label class="ratio-opt">
+                <input type="radio" name="model" value="gpt-image-2" checked />
+                <span>gpt-image-2<small>标准</small></span>
+              </label>
+              <label class="ratio-opt">
+                <input type="radio" name="model" value="gpt-image-2-vip" />
+                <span>gpt-image-2-vip<small>VIP · 更优</small></span>
+              </label>
+            </div>
+          </div>
+
+          <div class="field">
             <label class="field__label" for="prompt">提示词</label>
             <textarea
               id="prompt"
