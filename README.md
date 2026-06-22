@@ -89,6 +89,42 @@ Open http://localhost:8000.
 | `GRSAI_MODEL`    | `gpt-image-2`           | Model name passed to the API.                 |
 | `PUBLIC_BASE_URL`| (derived from headers)  | Explicit public base for uploaded images when behind a proxy/tunnel; may include `user:pass@` for a basic-auth tunnel so the upstream API can fetch uploads. |
 
+## Deploy to the public internet
+
+### One-click deploy on Render
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/nihao555-hub/gpt-image2)
+
+After clicking the button, Render will ask for the `GRSAI_API_KEY` environment
+variable. Paste your grsai API key there and hit **Apply**.
+
+### Deploy with Docker
+
+```bash
+docker build -t gpt-image2-studio .
+docker run -p 8000:8000 -e GRSAI_API_KEY=sk-your-key gpt-image2-studio
+```
+
+The app will be available at `http://<your-server>:8000`.
+
+### Deploy on Render manually
+
+1. Create a new **Web Service** on [Render](https://render.com) and connect this
+   GitHub repo.
+2. Render will auto-detect the `render.yaml` blueprint. Alternatively, configure:
+   - **Build command:** `pip install -e .`
+   - **Start command:** `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
+3. Add the environment variable `GRSAI_API_KEY` with your grsai API key.
+4. Deploy. Render provides a public `https://*.onrender.com` URL.
+
+### Deploy on Fly.io
+
+```bash
+fly launch --name gpt-image2-studio
+fly secrets set GRSAI_API_KEY=sk-your-key
+fly deploy
+```
+
 ## Project layout
 
 ```
